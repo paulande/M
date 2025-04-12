@@ -80,9 +80,15 @@ Run the following chunk of R code to see some examples.
 # Probably not independent
   tab2 <- matrix(c(45,10,14,50,35,12),3,2,byrow=TRUE)
   mosaic(tab2)
+# Perfectly independent (as in the quiz)
+  tab2 <- matrix(c(50,10,50,10,50,10),3,2,byrow=TRUE)
+  mosaic(tab2)
+# not independent
+  tab2 <- matrix(c(100,10,10,100,50,50),3,2,byrow=TRUE)
+  mosaic(tab2)
 ```
 
-Intuitively, the closer the vertical splits are to being aligned, the closer the observed table of counts will be to the expected table of counts. You can play around with adjusting the cell counts in the code above give yourself a better understanding of the mosaic plot as a tool for evaluating statistical independence visually. 
+Intuitively, the closer the vertical splits are to being aligned, the closer the observed table of counts will be to the expected table of counts (and we say they are independent). You can play around with adjusting the cell counts in the code above give yourself a better understanding of the mosaic plot as a tool for evaluating statistical independence visually. 
 
 A closely-related visualization is the sieve plot, which first draws the outline of the mosaic plot that we would expect to see under the assumption of independence (i.e., with the splits lined up).  It then fills in each cell of this outline with a grid of squares, scaled so that $n_{ij}$ squares fit within the $ij^{th}$ cell.  Thus, cells with bigger-than-expected counts are filled with denser grids, and cells with smaller-than-expected counts are filled with sparser grids.  For extra clarity, the "underfilled" cells are shaded red and the "overfilled" cells shaded blue.
 
@@ -121,15 +127,7 @@ chisq_stat0 <-function(tbl, smooth = 10e-8){
 
 Unlike the built-in R function, this function has a "smooth" argument, which adds a tiny positive value to every cell in the table. For tables with all non-zero counts, this changes the chi-squared statistic barely at all.  The smoothing is included to ensure that the chi-squared statistic can always be defined, even if one the rows or one of the columns of a table contains all zeroes.  This is a somewhat pathological situation in practice -- it can occur when we know that there was an additional possible level of a categorical variable, but we happened to not observe that level in the particular sample we have -- but when we run a simulation that resamples thousands of times from a table of small counts, such a situation will not-infrequently arise.      
 
-> Please note that you should NOT do this smoothing in practice. We are only doing it here so that our simulation will run without interruption. If you ever do encounter a table with one row or column that is all zeroes, you should think carefully about how to proceed.
-
-# Chi-squared Test (of association)
-
-Now we move into a formal statistical test of independence. Depending on the context of the problem, the $\chi^2$ test is also referred to as a test of association or a test of homogeneity. By calculating the $\chi^2$ statistic, we have a number associated with the deviation from independence for an observed table.  
-
-But, you should now ask---how big does that statistic have to be for us to say that we have enough evidence against the independence hypothesis? Could we have obtained a number this large or larger if the row and column variables really were independent?  If we're going to interpret this value statistically, to test the hypothesis of independence, we need a *reference distribution*.
-
-In what follows, we'll go through several different cases that depend upon sample size. For large samples (one rule of thumb on samples size holds that "large" means that all cell counts are 5 or larger and the table total is at least 30), the reference distribution is a $\chi^2$ distribution. When the sample size is not large, there is another option for evaluating statistical independence. 
+ hi^2$ distribution. When the sample size is not large, there is another option for evaluating statistical independence. 
 
 ## Standard Case (large sample size)
 
