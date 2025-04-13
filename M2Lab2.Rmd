@@ -138,8 +138,12 @@ You saw the Berkeley Admissions data in the M1L4 narrated lecture. These data ar
 `UCBAdmissions` stores the data in a 2 x 2 x 6 array, so we'll first collapse over the third dimension (department) using the `margin.table()` function, and then perform the $\chi^2$ test. Please run this chunk of R code (if you haven't already).
 
 ```{r}
-  (UCBA_sum <- margin.table(UCBAdmissions,c(1,2)))
-  chisq.test(UCBA_sum)
+str(UCBAdmissions)
+
+
+  (UCBA_sum <- margin.table(UCBAdmissions,c(1,2))) # keep the 1st and 2nd dimension, and sum over the 3rd - flatten
+  chisq.test(UCBA_sum) # conduct a chi^2 test on this flattened data
+  # note: using apply is a little clearer on what operations you want to use on the collapsed dimention apply(my_array, c(1, 2), sum)
 ```
 
 There are several things to notice. 
@@ -150,6 +154,10 @@ There are several things to notice.
 
 3. The p-value associated with this test statistic is very small -- we can report it as p < 0.0001. This provides convincing evidence that admission and gender are not independent. Let's also take a quick look at the mosaic plot: 
 
+Note: H_0 in this case is D1 and D2 ARE independent
+
+Note: Alignment in a mosaic plot > dimensions ARE independent, misalignment of dimension ARE NOT independent
+
 ```{r}
   mosaic(UCBA_sum)
 ```
@@ -159,19 +167,41 @@ The vertical split between Male and Female in the Admitted group is substantiall
 What about the continuity correction? There's actually quite a bit of data in the `UCBAdmissions` dataset, with `N = 4526`. In this case, the continuity correction doesn't make that much difference.  In fact, run the following code and compare the `X-squared` values and the p-values when `correct = TRUE` (the default) and when `correct = FALSE`.
 
 ```{r}
-  chisq.test(UCBA_sum)
+  chisq.test(UCBA_sum) # recommendation is to always use Yates' continuity correction, which is the default
   chisq.test(UCBA_sum,correct = FALSE)
 ```
 
 You should notice that the `X-squared` value changed a little bit without the continuity correction, but the p-value didn't change at all. This is fairly typical with *really* large sample sizes like we have here. The continuity correction doesn't really make any difference for our inference -- we still have really strong evidence that admission and gender are not independent. 
 
-The continuity correction was introduced to accommodate the use of a continuous probability distribution (the $\chi^2$ distribution) as the reference distribution for a statistic calculated from non-continuous (i.e., categorical) data. Simply put, it makes the performance of the $\chi^2$ statistic better (in terms of type II error) when the sample size is of moderate size.  We recommend that you simply use the default, `correct = TRUE`.
+The continuity correction was introduced to accommodate the use of a continuous probability distribution (the $\chi^2$ distribution) as the reference distribution for a statistic calculated from non-continuous (i.e., categorical) data. Simply put, it makes the performance of the $\chi^2$ statistic better (in terms of type II error - false neg) when the sample size is of moderate size.  We recommend that you simply use the default, `correct = TRUE`.
+
+Note: recall that chi^2 test = test of homogeneity
 
 The $\chi^2$ test is also called a test for homogeneity in some situations, and the `UCBAdmissions` dataset provides a good example. Another way that we could consider the independence (or lack of association) between admission and gender is to ask whether the proportion of male applicants admitted is the same as the proportion of female applicants admitted. Put another way, we ask whether the proportions of admits are the same (homogeneous) between the two groups, male applicants and female applicants:
 
+Note: for two groups H_0: prop A = prop B; p is homogeneous between the two groups; Q chi^2 can answer = is there a dif?
+
+Note: This sounds a lot like the case in which we would normally use a t test. So recall:
+Test	      Data Type	                            Question
+Chi-squared	Categorical vs. Categorical	          Are the proportions different?
+t-test	    Categorical (grouping) vs. Continuous	Are the means different?
+
+Note: Dimensions of a matrix
+[Admit, Gender, Dept]
+[rows, columns, layers]
+  1      2        3
+  
+Therefore, when we transpose, we "pivot" the table. In the case below, Gender is now in the 1st dimension spot and admit is in the 2nd.
+
 ```{r}
+# print the original matrix
+UCBA_sum
+
 # transpose the UCBA_sum matrix, so Gender is the row variable:
   (UCBA_sum2 <- t(UCBA_sum))
+
+# run the chi^2 on original
+chisq.test(UCBA_sum)
 
 # perform the test for a difference in two proportions:  
   prop.test(UCBA_sum2)
@@ -179,16 +209,22 @@ The $\chi^2$ test is also called a test for homogeneity in some situations, and 
 
 When you run this R chunk, you see the identical `X-squared` statistic to what we got from running `chisq.test(UCBA_sum)`. 
 
+Note: 0 $\notin$ 95% CI = reject H_0; genders are not homogenous in terms of admit 
+
 You'll also get some output that tells you about the difference between the two admit proportions. That the 95% confidence interval for the difference in the two proportions, 0.113 to 0.170, does not contain zero is another way for us to communicate that we have strong evidence that the two admit proportions are not the same -- i.e., that the genders are not homogeneous in terms of admissions. 
 
 Recall again: simply summarizing this particular dataset using this 2 x 2 table is perilous -- we know there's more to the story here. Indeed, if we collapsed over the admission decision to see the total numbers of applicants within each department, we could use the chi-squared test on this table to see that gender-specific application rates are not homogeneous, which suggests that collapsing over the departments could be a problem.
 
+Note: Collapsing "flattening" is aggregation, use caution.
+
 ```{r}
-(UCBApplicants <- margin.table(UCBAdmissions, c(2,3)))
+(UCBApplicants <- margin.table(UCBAdmissions, c(2,3))) # collapsing over admit, by sum
 chisq.test(UCBApplicants)
 ```
 
 Nevertheless, it's been useful to use the summary data for illustrating equivalence between the chi-squared test and the difference in proportions test.
+
+Note: Chi^2 test = Dif in Proportion Tests
 
 
 # Sampling, Randomization, and Small-Sample Inference
@@ -203,7 +239,9 @@ The data from this experiment naturally fall into a 2x2 table where one dimensio
 
 > There's also a good book called, not surprisingly, "The Lady Tasting Tea," by David Salsburg that gives an entertaining early history of Statistics. [I, Kollin, can neither confirm nor deny this statement which comes from a previous instructor.]
 
-The following R chunk recreates the Lady Tasting Tea data.
+The following R chunk recreates the Lady Tasting Tea data. "confusion matrix"
+
+Note: By adding the 2nd dimention, we see the information not just for wrong and right, but what the correct answer was for each answer. Interesting.
 
 ```{r}
 TeaTasting <-
@@ -212,6 +250,7 @@ matrix(c(3, 1, 1, 3),
        dimnames = list(Guess = c("Milk", "Tea"),
                        Truth = c("Milk", "Tea")))
 TeaTasting
+str(TeaTasting)
 ```                      
 
 There's nothing to prevent us from applying the `chisq.test()` function to the TeaTasting data:
@@ -222,13 +261,15 @@ chisq.test(TeaTasting, correct = FALSE)
 
 We do get an answer, but also the helpful warning that "Chi-squared approximation may be incorrect."  Why so?  (It's not because we said `correct = FALSE` -- the same warning will appear either way).  
 
-We now present a simulation that should give you some insight into the problem here. 
+We now present a simulation that should give you some insight into the problem here. Small sample size?
 
 ## Parametric bootstrapping
 
 The hypothesis of row-column independence can be expressed mathematically in terms of a probability distribution over the cell counts in a table.  With R, if you can "draw" a new table from that distribution, you can draw a thousand. Then, you can compute a $\chi^2$ statistic for each new table, and it turns out that you can use all of those recomputed statistics to approximate the sampling (reference) distribution of that statistic.  
 
-This idea (sample from a known distribution, calculate a test statistic, repeat) is closely related to the (perhaps familiar) idea of bootstrapping, in which a test statistic is calculated on re-samples (with replacement) from the original sample of data. There are entire books written about bootstrapping, and it's well beyond the scope of this course to go into details here. We use this technique here to help illustrate the limitations of the  Chi-squared distribution as the reference distribution for the $\chi^2$ statistic in the case of small counts.
+This idea (sample from a known distribution, calculate a test statistic, repeat) is closely related to the (perhaps familiar) idea of bootstrapping, in which a test statistic is calculated on re-samples (with replacement) from the original sample of data. There are entire books written about bootstrapping, and it's well beyond the scope of this course to go into details here. We use this technique here to help illustrate the limitations of the Chi-squared distribution as the reference distribution for the $\chi^2$ statistic in the case of small counts.
+
+Note: ref dist from resampling CLOSE true ref dist of chi^2 stat
 
 The essential result is that the reference distribution we get using our re-sampling technique is closer to the true reference distribution of the $\chi^2$ statistic than is the $\chi^2$ distribution *when the sample size is small* (simulation works just fine when the sample size is large as well, it's just a waste of computation when the known large-sample distribution applies).
 
@@ -296,17 +337,27 @@ As mentioned above, to use the re-sampling function, we need to make the verbal 
 
 Consider this scenario: we give the lady however many cups of tea she feels like tasting, and we don't tell her anything about how many of each type (milk-first or tea-first) there are.  This "unrestricted" sampling can be modeled using a Poisson distribution. [This case is included for sake of completeness -- in the context of inference, this and the next situation, where the total sample size is fixed can be treated the same.]
 
+Subject didn't know how many of each, lets her taste as many as she likes (unrestricted) = Poisson distribution
+
 ### Total Sample Size Fixed
 
-Now consider this scenario: The lady is to be presented with eight cups of tea, but the number that are milk-first is not predetermined. In the *actual* Lady Tasting Tea data, there were four milk-first cups, but in this scenario, there could have been two, five, eight, any number between zero and eight. In this scenario, the lady is not told how many cups of each type (milk-first or tea-first) there were. To perform this sampling, we use a multinomial distribution for the entire table (i.e., with N = 8 and four categories).  
+Now consider this scenario: The lady is to be presented with eight cups of tea, but the number that are milk-first is not predetermined. In the *actual* Lady Tasting Tea data, there were four milk-first cups, but in this scenario, there could have been two, five, eight, any number between zero and eight. In this scenario, the lady is not told how many cups of each type (milk-first or tea-first) there were. To perform this sampling, we use a multinomial distribution for the entire table (i.e., with N = 8 and four categories).  Note: How important is it to understand what the subject new before starting the test? Entirely different distributions are required?
+
+Note: Again, subject didn't know how many of each, restricted to 8 total cups = multinomial distribution
 
 ### One Margin Fixed
 
 In another scenario that could have produced the Lady Tasting Tea data, suppose there are four cups of each type of tea, but the lady *doesn't know* there are four of each. In this case "The Truth" margins are fixed (at four), but the "Guess" margins are not. For this type of sampling, we use independent multinomials within rows or within columns (i.e., with N  = 4 and two categories).  
 
+Note: one fixed margin (true) 4 of each; one unfixed (guess; subject doesn't know)
+Note distribution?: T/F independent multinomials (rows OR columns)
+
 ### Both Margins Fixed
 
 > This is the actual situation of Fisher's original Lady Tasting Tea experiment. Four cups of each type were presented, and the lady knew that she would taste four of each. Because of this, the row margins are fixed at four and the column margins also fixed at four. In this case, we base the sampling on (generalized) hypergeometric distribution.
+
+Note: both fixed; truth is fixed, subject knows
+Dist: hypergeometric distribution (generalized)
 
 ## Examples of Re-sampling: Lady Tasting Tea
 
@@ -321,17 +372,18 @@ ggplot() +
   ggtitle("Re-sampling distribution of chi-squared stat vs 
         theoretical chi-squared distribution") +
   xlab(expression(X^2)) +
-  ylab("") +
-  geom_line(mapping = aes(x = chisq_val, y = chisq_theory), color = "blue") +
-  geom_density(mapping = aes(x = resamp_tea$stats), bw = 0.05) + 
-  geom_vline(aes(xintercept = chisq_stat0(TeaTasting)), color = "red")
+  ylab("[Density Estimate]") +
+  geom_line(mapping = aes(x = chisq_val, y = chisq_theory, color = "Theoretical Chi-sq")) +
+  geom_density(mapping = aes(x = resamp_tea$stats, color = "Resampled Chi-sq"), bw = 0.05) + 
+  geom_vline(aes(xintercept = chisq_stat0(TeaTasting), color = "Observed Stat")) +
+  guides(color = guide_legend(title = "Legend"))
 ```
 
-In this plot, the smooth blue line is the theoretical Chi-squared (df = 1) reference distribution. The black line with a few spikes is the reference distribution we get by running the re-sampling code. There are actually only a few values of the chi-squared statistic that are possible with such a sparse table. Finally, the vertical red line is the value of the chi-squared statistic calculated from the observed table. 
+In this plot, the smooth blue line is the theoretical Chi-squared (df = 1) reference distribution. The [green] line with a few spikes is the reference distribution we get by running the re-sampling code. There are actually only a few values of the chi-squared statistic that are possible with such a sparse table. Finally, the vertical red line is the value of the chi-squared statistic calculated from the observed table. 
 
 The problem here is that with such small counts in the table, there are only a small number of rearranged (re-sampled) tables possible. There just aren't that many ways to rearrange eight cups of tea into a 2x2 table of counts, especially if we *also* fix both column and row totals! Therefore, only a limited number of tables, and an even more limited number of chi-squared statistics, can possibly be obtained. 
 
-This is precisely why using the large sample reference distribution (blue line) isn't such a good idea here, because is does a really poor job of approximating the resampled reference distribution (black line).
+This is precisely why using the large sample reference distribution (blue line) isn't such a good idea here, because is does a really poor job of approximating the resampled reference distribution ([green] line).
 
 It might seem like it was overkill to simulate 2000 samples and calculate the chi-squared statistic for each one, when there were actually only three possible chi-squared statistics for this situation! That is, maybe there is some way we could have have worked this out by hand.  Indeed, working it out "exactly" by hand is what Fisher did -- his test involves (essentially) listing every possible way that the chi-squared statistic could have been bigger than it was, and calculating the probability of each of those ways. 
 
@@ -341,11 +393,22 @@ Execute the following R chunk, which applies Fisher's Exact Test to the Lady Tas
 fisher.test(TeaTasting)
 ```
 
+Note: Fisher's Exact Test: tests if two categorical vars are independent; test of independence
+Note: used - small sampled sizes, assumes both are FIXED, uses odds ratio test
+Note: p-value 0.4857 we fail to reject H_0
+Note: H_0: p guesses = p random or odds ration = 1; by rejecting H_0 - no strong evid the guesses were better than random
+
 Fisher's Exact Test agrees pretty closely with the final simulation above -- because Fisher's exact test supposes that both rows and columns of the tables are fixed by design.  Restricting it in this way, as we see above, reduces the number of possible tables to deal with, which makes it easier to calculate the p-value "by hand."  And in the tea-tasting example, these restrictions actually do make sense -- there are 4 cups of each kind of tea, the lady *knows* there are 4 of each, there are only a few ways this thing can go. 
 
 We'd also like to call your attention to the odds ratio and 95% confidence interval estimates that appear in the `fisher.test()` output. Rather than using a chi-squared statistic for making inference, the `fisher.test()` function uses an odds ratio test. 
 
+Note: CI is extremely wide b/c sample size is small
+Note: CI includes 1, no effect
+
 > Important note: tests for equal odds ratios, equal proportions and homogeneity will yield similar inferences in the case of 2x2 tables. You just have to sort out which procedure makes the most sense for the data you are dealing with. 
+
+Note: equal odds ratios = equal proportions = homogeneity
+Note: but choose which based on your data
 
 ## Beyond Fixed Margins
 
@@ -358,6 +421,8 @@ You are welcome to replicate the call to the `two_way_resample()` function, chan
 ## Beyond 2 x 2 Tables
 
 You can apply `chisq.test()` and `fisher.test()` to general $I \times J$ tables, but you will only learn about the independence hypothesis. That is, you will not get any estimates. For estimates proportions and odds ratios from $I \times J$ tables, we have to turn to more sophisticated statistical models such as generalized linear models -- the topic of upcoming course modules.
+
+Note: these tests only result in independence verification
 
 # Module 2 Lab Assignment Instructions
 

@@ -1,0 +1,172 @@
+---
+title: "Lab Assignment 2"
+author: "Paul J Anderson"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r clear-workspace, include=FALSE}
+# clear all objects from the environment
+rm(list = ls())
+
+# clear the console — only works in RStudio, not R Markdown output
+cat("\014")
+
+# this can also be done with the environment pane > broom icon
+```
+
+```{r setup, include=FALSE}
+# do not include coding chunks in knit
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r load in libraries}
+library(vcdExtra)
+library(Sleuth3)
+library(tidyverse)
+library(gnm)
+```
+
+What to submit (gradescope):
+1. .Rmd
+2. pdf
+Note: the document mentions the .Rmd must generate a reasonable HTML output, but we are checking and submitting a pdf. Is this a mistake?
+
+## Questions: 
+
+> NOTE: The first two questions are for credit.  The next two are optional/for fun.
+
+### Q1. 
+The following data come from one of Gregor Mendel's famous experiments with pea plants.  In this particular experiment, Mendel examined two categorical traits in pea seeds, each with two possible values: seed color -- yellow or green -- and seed shape -- round or angular.  According to Mendel's hypothesis, the inheritance pattern of these traits was characterized by "independent assortment" -- that is, there was no "genetic linkage" between these traits.  
+
+```{r}
+mendel <- as.table(
+  matrix(c(315, 108, 101, 32),
+         nrow = 2,
+         dimnames = 
+           list(Color= c("Yellow", "Green"),
+                Shape = c("Round", "Angular"))))
+mendel
+```
+
+How consistent are these data with Mendel's hypothesis of independence?  Notice that in this particular case, we're not interested in a *departure* from independence, but rather a *confirmation* of independence. Is a Chi-squared test appropriate here? Why or why not?
+
+ANSWER: Highly consistent. Mendel hypothesized that color and shape were genetically independent. There are two tests we learned in this lab to test independence of categorical data. Chi-squared test of independence and Fisher's Exact Test. Here is a breakdown of the assumptions:
+Test	                            Use Case	                                                                        When to Use
+Chi-squared test of independence	Tests whether two categorical variables are independent (e.g. gender vs. outcome)	Large sample sizes (expected counts ≥ 5)
+Fisher’s Exact Test	              Tests independence in a 2×2 table without relying on large-sample approximations	Small sample sizes (especially when expected cell counts < 5)
+
+In this case, total cell counts are >=5, T/F we can use Chi-squared test of independence to "confirm" independence.
+
+Let's run the test in R, since this is a 2x2 and we're using the default of Yates' per instruction, we'll use Pearson's Chi-squared test with Yates' continuity correction. The ouput of this test (p-value = 0.8208) indicates there is insufficient evidence to reject the null hypothesis of independence of distributions. These findings are highly consistent with Mendel's hypothesis of independence. 
+```{r}
+chisq.test(mendel)
+```
+
+### Q2. 
+We mentioned previously, and it's mentioned in the narrated lecture materials that there's an equivalence between the Chi-squared test and the difference in proportions test in the case of 2x2 tables. Take a look for the Mendel data:
+
+```{r}
+chisq.test(mendel, correct = FALSE)
+```
+
+```{r}
+prop.test(mendel, correct = FALSE)
+```
+
+The output from the second chunk refers to a `two.sided` test, with an interpretation in terms of a signed difference between two proportions, whereas the `chisq.test()` is a one-sided test, with an interpretation involving deviation from the hypothesis of independent rows and columns.  It's not *entirely* obvious why these results should be the same.  The following exercise can help you see what's going on.
+
+Use `rnorm()` and `rchisq()` to produce and store the following vectors:
+
+```{r 1000 draws from the standard normal distribution, 1000 draws from the Chi-squared distribution with 1 degree of freedom}
+set.seed(201)
+v1 <- rnorm(1000)
+v2 <- rchisq(1000, df = 1)
+```
+
+1000 draws from the standard normal distribution,
+1000 draws from the Chi-squared distribution with 1 degree of freedom.
+
+    (a) Construct separate histograms/density plots of the raw chi-squared values and the *squares* of the standard normal values. What do you observe?
+    
+ANSWER: While there are some slight variation in data due to random sampling, the squared standard normal distribution (Z^2) and the chi-shared distribution with 1 degree of freedom are closely matched. We expect this, since the square of the standard normal variable follows a chi-squared distribution with 1 DF.
+
+```{r}
+# square the standard normal values
+v1_squared <- v1^2
+
+# creating the df
+df <- data.frame(
+  value = c(v1_squared, v2),
+  type = rep(c("Z^2", "Chi-sq (df = 1)"), each = 1000)
+)
+
+# plot
+ggplot (df, aes(x = value, fill = type)) +
+  geom_density(alpha = 0.5) +
+  labs(title = "Density of Z^2 vs Chi-squared (df = 1)",
+       x = "Value", y = "Density", fill = "Distribution") +
+  theme_minimal()
+```
+    
+    (b) Recall (or obtain from `qnorm(0.975)` that the *2-sided 95%* critical values for the standard normal distribution are ± 1.96. Use `qchisq()` to compare the *square* of these 2-sided 95% critical values from the standard normal to the *one-sided* 95% critical value for the Chi-squared(1).  What does this suggest about tests based on these two reference distributions?
+    
+ANSWER: We see that the critical values from a 2-sided 95% test are +/- 1.96. We square this value and get 3.8416, our Z^2. We run a one-sided 95% critical value chi^2 test with 1 DF and get 3.8416, the same value. This shows that the square of the standard normal variable (Z^2) follows a chi-squared distribution with 1 degree of freedom. 
+    
+```{r}
+# critical values for 2-sided 95% test
+(crit_95 <- qnorm(0.975))
+
+# critical values from the standard normal or Z^2 distribution
+(sq_crit_95 <- crit_95^2)
+
+# one-sided 95% crit value for chi-squared with 1 DF
+(qchisq(0.95, df = 1))
+```
+
+```{r}
+qchisq()
+```
+
+    
+    
+
+**END REQUIRED QUESTIONS**
+
+> The next two questions are optional -- you do not need to submit anything about them for your assignment.  
+
+### Q3. 
+This isn't actually a question, just some reading and code to work through. It's an interesting continuation of Mendel's independence hypothesis, and a slightly different application of `chisq.test()` in R.
+
+Mendel actually had a more sophisticated hypothesis than "seed color and seed shape are independent" -- he knew *how* they should be independent based on his mechanistic understanding of the process of inheritance of dominant and recessive traits.  On these grounds, Mendel hypothesized *specific proportions* for each cell in this particular table.  He knew that if his ideas were correct, the cell proportions for his experiment should have been, specifically:
+
+```{r}
+(mendel_expect <- cbind(c(9, 3), c(3,1)))/16
+
+```
+
+This is a more stringent requirement than row/column independence, since there would be many possible tables consistent with some kind of independence relationship, but radically inconsistent with Mendel's *scientific* understanding.  For instance, if the upper right and lower left cell counts had been reversed, we would get the same chi-squared statistic for the table (check!) but seeing this would have suggested that Mendel was somehow seriously mistaken.
+
+Here, we need a different approach than the chi-squared test of independence -- we want to test an entire proposed distribution over the 4 cells.  The tool for this job is the *chi-squared test of goodness of fit*, which in R is also performed by `chisq.test().`
+
+The goodness of fit test is supposed to test the distribution of a single variable, so `chisq.test()` will perform the goodness of fit test if the data are provided as a single vector, rather than as a 2 x 2 table.  Since we have particular distribution in mind, we'll need to provide those hypothesized probabilities as well:
+
+```{r}
+(mendel_vec <- as.vector(mendel)) # stretch out the table and make sure we know HOW it was stretched out, in order to get the hypothesized probabilities associated with the correct table cells.
+```
+
+And now preform the Chi-squared test passing in the *vector* of observed counts and the vector of specific proportions:
+
+```{r}
+chisq.test(mendel_vec, p = c(9/16, 3/16, 3/16, 1/16))
+```
+
+Note that the degrees of freedom are different -- 4-1 = 3 instead of (2-1)(2-1) = 1.  A very rough idea of why this should be is that with a more specific hypothesis ("each cell probability should be exactly so") there are more ways the data could deviate from it.
+
+An interesting historical note: R.A. Fisher, when reviewing Mendel's original data, applied the chi-squared test to some data like these, and reached the conclusion that deviations were *too small* to have arisen by chance.  He thought that the independence model fit so closely that Mendel's data must have been deliberately doctored -- though in his great respect for Mendel, Fisher laid the blame on "some gardening assistant" who must have known too well what his supervisor hoped to see.
+
+### Q4.
+
+Suppose we performed the tea-tasting experiment, and produced a table with 4's in the diagonal and 0's in the off-diagonal cells -- that is, suppose the lady performed as well as the experiment allowed.  If we had observed this (best possible) performance under the **fixed-columns design** (where the lady didn't know the number of cups of each type), what p-value would she score? (use resampling script).  What if we observed this same performance under the **fixed-rows and fixed-columns design** (where she knew there were 4 cups of each)?  
+
+Does it make sense that the best-possible performance earns a smaller p-value under the more "challenging" experimental setup than under the "easier" one?  What does this say about which design we might prefer to use? 
