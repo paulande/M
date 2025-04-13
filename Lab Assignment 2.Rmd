@@ -2,22 +2,26 @@
 title: "Lab Assignment 2"
 author: "Paul J Anderson"
 date: "`r Sys.Date()`"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
+  pdf_document:
+    latex_engine: xelatex
 ---
 
 ```{r clear-workspace, include=FALSE}
 # clear all objects from the environment
-rm(list = ls())
+# rm(list = ls())
 
 # clear the console — only works in RStudio, not R Markdown output
-cat("\014")
+# cat("\014")
 
 # this can also be done with the environment pane > broom icon
 ```
 
 ```{r setup, include=FALSE}
 # do not include coding chunks in knit
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r load in libraries}
